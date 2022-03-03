@@ -4,6 +4,8 @@ https://github.com/aurazelco/BINP29_MalariaProject.git
 
 All analysis is executed on the server.
 
+We start from genomes of malaria parasites, and the endpoint is to build phylogenetic trees using parasites with different hosts, with a particular focus on *Haemoproteus tartakovskyi*. 
+
 ## Data Collection
 
 We first create a parent folder, and download the data:
@@ -29,6 +31,8 @@ After uploading it to the tmp fodler, we proceed to work on the *Haemoproteus ta
 ## Processing of *Haemoproteus tartakovskyi* (Ht) data
 ### Clean genome sequence
 
+*Haemoproteus tartakovskyi* is a parasite of birds; therefore, even if the parasite genome was enriched in the experimental settings, we still need to remove the sequences and scaffolds from the hosts before running the phylogenetic analysis. 
+
 From this genome, we need to remove the sequences which have a GC content higher than a certain threshold, and the sequences shorter than 3000 nucleotides. To do so, we run the remoevScaffold.py script. 
 
 But first, we make two new directories, one which contains all python scripts and the other to store the results of removeScaffold.py
@@ -52,6 +56,8 @@ mv genemark_es.gtf Haemoproteus.gff
 cat Haemoproteus.gff | sed "s/ GC=.*\tGeneMark.hmm/\tGeneMark.hmm/" > Ht2.gff
 cd ..
 ```
+### gffParse
+
 Once that is done, we retrieve the version of gffParse.pl. 
 ```shell
 mkdir -p 4_GTFtoFASTA && cd 4_GTFtoFASTA
@@ -62,7 +68,9 @@ The gffParse.pl script is run as:
 ```shell
 gffParse.pl -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output  -g ../3_GenePredictionHaemoproteus/Ht2.gff -c -p
 ```
-Once we obtain the gff files, we would liek to BLAST so that we can remove the sequences which align to birds. 
+### BLAST
+
+Once we obtain the gff files, we would like to BLAST so that we can remove the sequences which align to birds. 
 cd ..
 mkdir -p 5_BLAST && cd 5_BLAST
 blastx -query ../4_GTFtoFASTA/gffParse.fna -db SwissProt -out Haemoproteus.blastx -num_threads 20 -evalue 1e-10
