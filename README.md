@@ -25,38 +25,44 @@ mkdir 1_GeneMark && cd 1_GeneMark
 nohup gmes_petap.pl --sequence ../Plasmodium_yoelii.genome &
 ```
 After uploading it to the tmp fodler, we proceed to work on the *Haemoproteus tartakovskyi* data. 
-## Processing of Haemoproteus tartakovskyi data
+
+## Processing of *Haemoproteus tartakovskyi* (Ht) data
 ### Clean genome sequence
 
+From this genome, we need to remove the sequences which have a GC content higher than a certain threshold, and the sequences shorter than 3000 nucleotides. To do so, we run the remoevScaffold.py script. 
+
+But first, we make two new directories, one which contains all python scripts and the other to store the results of removeScaffold.py
+```shell
 mkdir -p Scripts && cd Scripts
-scp inf-36-2021@bioinf-biol302436.biol.lu.se:/home/inf-36-2021/Desktop/BINP29/malaria_project/removeScaffold.py .
-
-# insert removeScaffold.py script here
-
 mkdir -p 2_RemoveScaffolds && cd 2_RemoveScaffolds
-
+```
+The removeScaffold.py script is run as:
+```shell
 python ../Scripts/removeScaffold.py -i ../Haemoproteus_tartakovskyi.genome -o Haemoproteus_tartakovskyi.output
-
+```
+### Make a gene prediction
+We run again GeneMark, this time on the 'cleaned' Ht genome. 
+```shell
 mkdir -p 3_GenePredictionHaemoproteus && cd 3_GenePredictionHaemoproteus
 nohup gmes_petap.pl --sequence ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output &
-
+```
+Once this is run, we would like to run the gffParse.pl script. However, there is a discrepancy on the scaffold names; therefore, we use sed to remove the extra fields. 
+```shell
 mv genemark_es.gtf Haemoproteus.gff
 cat Haemoproteus.gff | sed "s/ GC=.*\tGeneMark.hmm/\tGeneMark.hmm/" > Ht2.gff
 cd ..
-
+```
+Once that is done, we retrieve the version of gffParse.pl. 
+```shell
 mkdir -p 4_GTFtoFASTA && cd 4_GTFtoFASTA
 gffParse.pl -v
 #gffParse.pl version 1.1
-
+```
+The gffParse.pl script is run as:
+```shell
 gffParse.pl -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output  -g ../3_GenePredictionHaemoproteus/Ht2.gff -c -p
-
-#INFO: Following files were output in the directory
-#      /home/inf-36-2021/BINP29/malaria_project/4_GTFtoFASTA:
-#      gffParse.fna (fasta file containing the genes)
-#      gffParse.log (log file)
-#      gffParse.faa (fasta file containing translated genes)
-
-
+```
+Once we obtain the gff files, we would liek to BLAST so that we can remove the sequences which align to birds. 
 cd ..
 mkdir -p 5_BLAST && cd 5_BLAST
 blastx -query ../4_GTFtoFASTA/gffParse.fna -db SwissProt -out Haemoproteus.blastx -num_threads 20 -evalue 1e-10
