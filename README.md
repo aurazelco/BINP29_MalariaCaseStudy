@@ -6,7 +6,7 @@ All analysis is executed on the server.
 
 We start from genomes of malaria parasites, and the endpoint is to build phylogenetic trees using parasites with different hosts, with a particular focus on *Haemoproteus tartakovskyi*. 
 
-The novel python scripts (removeScaffold.py, removeBird.py, GCcont.py and buscoParser.py) are present in the Github repo. 
+The novel python scripts (removeScaffold.py, removeBird.py, GCcontent.py and buscoParser.py) are present in the Github repo. 
 
 ## Data Collection
 
@@ -97,26 +97,26 @@ cd ..
 mkdir -p 6_FilteredGeneMark && cd 6_FilteredGeneMark
 python ../Scripts/removeBird.py -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output -s ../5_BLAST/bird_scaffolds.txt -o Haemoproteus_clean.genome
 ```
-### Gene Prediction on the clean genome
+### Gene Prediction and gffParse on the clean genome
 We run the GeneMark script again, as before:
 ```shell
 nohup gmes_petap.pl --sequence Haemoproteus_clean.genome &
 mv genemark_es.gtf Haemoproteus_clean.gtf # renamed files
 ```
-
-# length of genome
-cd 6_FilteredGeneMark/
-
-# now we run the gffParse.pl again, so we extract the genes again
+And the gffParse.pl:
+```shell
 cd ..
 mkdir -p 7_CleanGTFtoFASTA && cd 7_CleanGTFtoFASTA
 gffParse.pl -i ../6_FilteredGeneMark/Haemoproteus_clean.genome -g ../6_FilteredGeneMark/Haemoproteus_clean.gtf -c -p
-cd ../6_FilteredGeneMark
-cat Haemoproteus_clean.genome | grep -v "^>" | tr -d "\n" | wc -c
-# 22068498
+```
+
+#### Question 3 - genome length
+```shell
 cd ..
+cat 6_FilteredGeneMark/Haemoproteus_clean.genome | grep -v "^>" | tr -d "\n" | wc -c
+# 22068498
 for file in *.genome; do echo $file; grep -v "^>" $file | tr -d "\n" | wc -c; done
-#Haemoproteus_tartakovskyi.genome -> this is before filtering
+#Haemoproteus_tartakovskyi.genome -> this is before filtering (not included in final table)
 # 22609283
 #Plasmodium_berghei.genome
 #17954629
@@ -132,11 +132,11 @@ for file in *.genome; do echo $file; grep -v "^>" $file | tr -d "\n" | wc -c; do
 #22222369
 #Toxoplasma_gondii.genome
 #128105889
-
+```
+#### Question 3 - number of genes
+```shell
 mkdir -p 8_allGTFs && cd 8_allGTFs
-cp  /tmp/Prediction/*.gtf .
-cp /resources/binp29/Data/malaria/Tg.gff.gz .
-gzip -d Tg.gff.gz
+# after copying the gtf files
 # just changed the name so that all files are .gtf
 mv Tg.gff toxoplasma_gondii.gtf
 # copy here
@@ -160,13 +160,15 @@ for file in *.gtf; do echo $file; cut -f9 $file | cut -d ";" -f1 | sort -u | wc 
 # 4919
 # toxoplasma_gondii.gtf
 # 15892
+```
 
-# Gc content
+#### Question 3 - GC content
+To calculate the GC content, I wrote a python script, GCcontent.py, which runs as python Scripts/GCcontent.py -path 9_Genomes/ and prints the result to the console (see repo for full code). 
+
+```shell
 mkdir -p 9_Genomes
-mv *.genome 9_Genomes/
-rm 9_Genomes/Haemoproteus_tartakovskyi.genome
-cp 6_FilteredGeneMark/Haemoproteus_clean.genome 9_Genomes/
-scp inf-36-2021@bioinf-biol302436.biol.lu.se:/home/inf-36-2021/Desktop/BINP29/malaria_project/GCcontent.py ../Scripts
+# moved all genomes to a new folder for better tree organization
+
 python Scripts/GCcontent.py -path 9_Genomes/
 #9_Genomes/Plasmodium_berghei.genome
 #23.72%
@@ -184,201 +186,71 @@ python Scripts/GCcontent.py -path 9_Genomes/
 #26.02%
 #9_Genomes/Plasmodium_faciparum.genome
 #19.36%
+```
 
+All these results can be found summarized in the main.txt file. 
 
+## Phylogenetic trees
+### Identify orthologs
+Now that we have clean Ht genome (hereafter called Hc), we can run proteinortho and BUSCO to find orthologs. 
 
-#### Phylogenetic trees
+For each genome, we need to run gffParse.pl:
+```shell
 mkdir 10_allGeneMark
+# renames file
 mv 8_allGTFs/knowlesi.gtf 8_allGTFs/plasmodium_knowlesi.gtf
 
 for file in 8_allGTFs/*; do echo $file; genome=$(echo $file | cut -d '/' -f2 | cut -d '.' -f1); genus=$(echo $file | cut -d '/' -f2 | cut -c 1); species=$(echo $file | cut -d '_' -f3 | cut -c 1); output=(${genus^}$species); gffParse.pl -i 9_Genomes/${genome^}'.genome' -g $file -c -p -b 10_allGeneMark/$output ; done
+```
 
-#------------------------------------------------
-8_allGTFs/Haemoproteus_clean.gtf
+Now all gff results are in the 10_allGeneMark folder,relabelled as Hc,Pb,Pc,Pf,Pk,Pv,Py,Tg. 
 
-INFO: The gff or gtf file 8_allGTFs/Haemoproteus_clean.gtf has successfully been parsed.
-      There were 1734 scaffolds containing genes.
-      The scaffolds contained 4429 genes.
-      The genes contained the feature CDS 11953 times.
 
-INFO: The scaffold/genome file 9_Genomes/Haemoproteus_clean.genome was successfully parsed.
-      There were 1803 scaffolds. This number may be higher than the one above.
-
-INFO: Following files were output in the directory
-      /home/inf-36-2021/BINP29/malaria_project:
-      10_allGeneMark/Hc.fna (fasta file containing the genes)
-      10_allGeneMark/Hc.log (log file)
-      10_allGeneMark/Hc.faa (fasta file containing translated genes)
-
-NOTICE: There are 951 warnings in the log file.
-        Reading frames have been adjusted for 951 genes (with the use of -c option).
-
-8_allGTFs/plasmodium_berghei.gtf
-
-INFO: The gff or gtf file 8_allGTFs/plasmodium_berghei.gtf has successfully been parsed.
-      There were 5271 scaffolds containing genes.
-      The scaffolds contained 7282 genes.
-      The genes contained the feature CDS 16453 times.
-
-INFO: The scaffold/genome file 9_Genomes/Plasmodium_berghei.genome was successfully parsed.
-      There were 7479 scaffolds. This number may be higher than the one above.
-
-INFO: Following files were output in the directory
-      /home/inf-36-2021/BINP29/malaria_project:
-      10_allGeneMark/Pb.fna (fasta file containing the genes)
-      10_allGeneMark/Pb.log (log file)
-      10_allGeneMark/Pb.faa (fasta file containing translated genes)
-
-NOTICE: There are 3087 warnings in the log file.
-        Reading frames have been adjusted for 3087 genes (with the use of -c option).
-
-8_allGTFs/plasmodium_cynomolgi.gtf
-
-INFO: The gff or gtf file 8_allGTFs/plasmodium_cynomolgi.gtf has successfully been parsed.
-      There were 858 scaffolds containing genes.
-      The scaffolds contained 5787 genes.
-      The genes contained the feature CDS 17161 times.
-
-INFO: The scaffold/genome file 9_Genomes/Plasmodium_cynomolgi.genome was successfully parsed.
-      There were 1663 scaffolds. This number may be higher than the one above.
-
-INFO: Following files were output in the directory
-      /home/inf-36-2021/BINP29/malaria_project:
-      10_allGeneMark/Pc.fna (fasta file containing the genes)
-      10_allGeneMark/Pc.log (log file)
-      10_allGeneMark/Pc.faa (fasta file containing translated genes)
-
-NOTICE: There are 259 warnings in the log file.
-        Reading frames have been adjusted for 259 genes (with the use of -c option).
-
-8_allGTFs/plasmodium_faciparum.gtf
-
-INFO: The gff or gtf file 8_allGTFs/plasmodium_faciparum.gtf has successfully been parsed.
-      There were 15 scaffolds containing genes.
-      The scaffolds contained 5207 genes.
-      The genes contained the feature CDS 15638 times.
-
-INFO: The scaffold/genome file 9_Genomes/Plasmodium_faciparum.genome was successfully parsed.
-      There were 15 scaffolds. This number may be higher than the one above.
-
-INFO: Following files were output in the directory
-      /home/inf-36-2021/BINP29/malaria_project:
-      10_allGeneMark/Pf.fna (fasta file containing the genes)
-      10_allGeneMark/Pf.log (log file)
-      10_allGeneMark/Pf.faa (fasta file containing translated genes)
-
-NOTICE: There are 2 warnings in the log file.
-        Reading frames have been adjusted for 2 genes (with the use of -c option).
-
-8_allGTFs/plasmodium_knowlesi.gtf
-
-INFO: The gff or gtf file 8_allGTFs/plasmodium_knowlesi.gtf has successfully been parsed.
-      There were 14 scaffolds containing genes.
-      The scaffolds contained 4953 genes.
-      The genes contained the feature CDS 15416 times.
-
-INFO: The scaffold/genome file 9_Genomes/Plasmodium_knowlesi.genome was successfully parsed.
-      There were 14 scaffolds. This number may be higher than the one above.
-
-INFO: Following files were output in the directory
-      /home/inf-36-2021/BINP29/malaria_project:
-      10_allGeneMark/Pk.fna (fasta file containing the genes)
-      10_allGeneMark/Pk.log (log file)
-      10_allGeneMark/Pk.faa (fasta file containing translated genes)
-
-NOTICE: There are 4024 warnings in the log file.
-        Reading frames have been adjusted for 858 genes (with the use of -c option).
-
-        8_allGTFs/plasmodium_vivax.gtf
-
-        INFO: The gff or gtf file 8_allGTFs/plasmodium_vivax.gtf has successfully been parsed.
-              There were 786 scaffolds containing genes.
-              The scaffolds contained 5682 genes.
-              The genes contained the feature CDS 15461 times.
-
-        INFO: The scaffold/genome file 9_Genomes/Plasmodium_vivax.genome was successfully parsed.
-              There were 2747 scaffolds. This number may be higher than the one above.
-
-        INFO: Following files were output in the directory
-              /home/inf-36-2021/BINP29/malaria_project:
-              10_allGeneMark/Pv.fna (fasta file containing the genes)
-              10_allGeneMark/Pv.log (log file)
-              10_allGeneMark/Pv.faa (fasta file containing translated genes)
-
-        NOTICE: There are 238 warnings in the log file.
-                Reading frames have been adjusted for 238 genes (with the use of -c option).
-
-        8_allGTFs/plasmodium_yoelii.gtf
-
-        INFO: The gff or gtf file 8_allGTFs/plasmodium_yoelii.gtf has successfully been parsed.
-              There were 116 scaffolds containing genes.
-              The scaffolds contained 4919 genes.
-              The genes contained the feature CDS 14724 times.
-
-        INFO: The scaffold/genome file 9_Genomes/Plasmodium_yoelii.genome was successfully parsed.
-              There were 130 scaffolds. This number may be higher than the one above.
-
-        INFO: Following files were output in the directory
-              /home/inf-36-2021/BINP29/malaria_project:
-              10_allGeneMark/Py.fna (fasta file containing the genes)
-              10_allGeneMark/Py.log (log file)
-              10_allGeneMark/Py.faa (fasta file containing translated genes)
-
-        NOTICE: There are 18 warnings in the log file.
-                Reading frames have been adjusted for 18 genes (with the use of -c option).
-
-                8_allGTFs/toxoplasma_gondii.gtf
-
-                INFO: The gff or gtf file 8_allGTFs/toxoplasma_gondii.gtf has successfully been parsed.
-                      There were 2238 scaffolds containing genes.
-                      The scaffolds contained 15892 genes.
-                      The genes contained the feature CDS 103760 times.
-
-                INFO: The scaffold/genome file 9_Genomes/Toxoplasma_gondii.genome was successfully parsed.
-                      There were 2290 scaffolds. This number may be higher than the one above.
-
-                INFO: Following files were output in the directory
-                      /home/inf-36-2021/BINP29/malaria_project:
-                      10_allGeneMark/Tg.fna (fasta file containing the genes)
-                      10_allGeneMark/Tg.log (log file)
-                      10_allGeneMark/Tg.faa (fasta file containing translated genes)
-
-#------------------------------------------------
-
-# installation
+### Installation of ProteinOrtho and BUSCO
+```shell
 conda create -n malariaenv
 conda activate malariaenv
 conda install proteinortho
 conda update --name base conda
 conda deactivate
 conda create -n malariaBusco -c conda-forge -c bioconda busco=5.3.0
+```
 
-
-# proteinortho
+#### ProteinOrtho
+We create a new directory, we activate the conda environment for proteinortho and then we run it as follows:
+```shell
 mkdir 11_ProteinOrtho && cd 11_ProteinOrtho
 conda activate malariaenv
 # I have Hc instead of Ht because the names are Haemo..._clean
 nohup proteinortho6.pl ../10_allGeneMark/{Hc,Pb,Pc,Pf,Pk,Pv,Py,Tg}.faa &
 conda deactivate
-
+# how many orthologs we have?
 grep -v '^#'  11_ProteinOrtho/myproject.proteinortho.tsv | wc -l
 # 5126
+```
 
-
-#BUSCO
-conda malariaBusco
+#### BUSCO
+We change the environment to the one where we installed BUSCO, and then run BUSCO for all protein files (.faa) obtained from the last gffParse.pl command. 
+```shell
+conda activate malariaBusco
 mkdir -p 12_BUSCO
 
 for file in 10_allGeneMark/*.faa; do echo $file; output=$(echo $file | cut -d '/' -f2 | cut -d '.' -f1); echo $output; busco -i $file -o 12_BUSCO/$output -m prot -l apicomplexa; done
+```
 
-
-
+The orthologs in BUSCO are classified as:
+```shell
 cat 12_BUSCO/Tg/run_apicomplexa_odb10/full_table.tsv | grep -v '^#' | cut -f2 | sort -u
 Complete
 Duplicated
 Fragmented
 Missing
+```
+We are therefore interested in creating the trees from orthologs which are duplicated or complete. 
 
+#### Question 7
+
+```shell
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; (grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u| wc -l ) ; done
 Hc
 325
@@ -396,26 +268,47 @@ Py
 434
 Tg
 384
+```
 
+#### Question 9-10
+
+```shell
 mkdir -p 13_UniqProtID
 
 # creates files to contain the IDs from BUSCO
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; (grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u > 13_UniqProtID/$species.txt) ; done
 
-# makes one concatenated file
+# makes two concatenated files, one with all species, and one without Tg
 cat 13_UniqProtID/*.txt >> 13_UniqProtID/all.txt
+cat 13_UniqProtID/{Hc,Pb,Pc,Pf,Pk,Pv,Py}.txt >> 13_UniqProtID/noTg.txt
+
+# prints how many BUSCO ids are found in all species
 cat 13_UniqProtID/all.txt | sort | uniq -c | grep '8 ' | wc -l
 # 185
+# prints how many BUSCO ids are found in all species except Tg
 cat 13_UniqProtID/noTg.txt | sort | uniq -c | grep '7 ' | wc -l
 # 207
+```
 
-# made a list of the BUSCO species folders
+Interpretation is found in the main.txt file. 
+
+#### BUSCO Parser
+Now that we have the results from BUSCO, we want to retrieve the orthologs sequences so that we can run first an alignment, and then build the phylogenetic trees. 
+
+The python script I wrote, buscoParser.py, takes an input the species name (corresponding to the folder in the BUSCO result directory), some input directories and an optional output directory . 
+
+Input files needed for the script:
+```shell
+# make a list of the BUSCO species folders
 for i in 12_BUSCO/*; do sp=$(echo $i | cut -d '/' -f2); echo $sp; done > 13_UniqProtID/species_names.txt
-
-# copies the script from local to server
-scp inf-36-2021@bioinf-biol302436.biol.lu.se:/home/inf-36-2021/Desktop/BINP29/malaria_project/buscoParser.py Scripts/
 
 mkdir 14_BUSCOParse_output
 cat 13_UniqProtID/all.txt | sort | uniq -c | grep '8 ' | cut -d ' ' -f8 > 13_UniqProtID/BUSCO_uniq_ID.txt 
-python Scripts/buscoParser.py -busco_id 13_UniqProtID/BUSCO_uniq_ID.txt -species 13_UniqProtID/species_names.txt -busco_path 12_BUSCO/ -faa_path 10_allGeneMark/ -output_path 14_BUSCOParse_output/
+```
+The python script runs as follows (see repo for full code):
 
+```shell
+python Scripts/buscoParser.py -busco_id 13_UniqProtID/BUSCO_uniq_ID.txt -species 13_UniqProtID/species_names.txt -busco_path 12_BUSCO/ -faa_path 10_allGeneMark/ -output_path 14_BUSCOParse_output/
+```
+
+This script produces 185 files, containing the species name and the ortholog sequence in a FASTA-like format. 
