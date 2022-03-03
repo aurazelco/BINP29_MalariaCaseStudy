@@ -6,6 +6,8 @@ All analysis is executed on the server.
 
 We start from genomes of malaria parasites, and the endpoint is to build phylogenetic trees using parasites with different hosts, with a particular focus on *Haemoproteus tartakovskyi*. 
 
+The novel python scripts (removeScaffold.py, removeBird.py, GCcont.py and buscoParser.py) are present in the Github repo. 
+
 ## Data Collection
 
 We first create a parent folder, and download the data:
@@ -40,7 +42,7 @@ But first, we make two new directories, one which contains all python scripts an
 mkdir -p Scripts && cd Scripts
 mkdir -p 2_RemoveScaffolds && cd 2_RemoveScaffolds
 ```
-The removeScaffold.py script is run as:
+The removeScaffold.py script is run as (see repo for full code):
 ```shell
 python ../Scripts/removeScaffold.py -i ../Haemoproteus_tartakovskyi.genome -o Haemoproteus_tartakovskyi.output
 ```
@@ -70,41 +72,41 @@ gffParse.pl -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output  -g ../3_Ge
 ```
 ### BLAST
 
-Once we obtain the gff files, we would like to BLAST so that we can remove the sequences which align to birds. 
+Once we obtain the gff files, we would like to BLAST so that we can remove the sequences which align to birds. Theerfore, we run BLASTX on the gffParse.fna file we obtained in the pervious step. 
+
+```shell
 cd ..
 mkdir -p 5_BLAST && cd 5_BLAST
 blastx -query ../4_GTFtoFASTA/gffParse.fna -db SwissProt -out Haemoproteus.blastx -num_threads 20 -evalue 1e-10
-# BLASTX 2.11.0+
-
-ln -s /resources/binp29/Data/malaria/taxonomy.dat taxonomy.dat
-ln -s /resources/binp29/Data/malaria/uniprot_sprot.dat uniprot_sprot.dat
-
-
-scp inf-36-2021@bioinf-biol302436.biol.lu.se:/home/inf-36-2021/Desktop/BINP29/malaria_project/removeScaffold.py ../Scripts
-
-# just to have an input to play with for the second python script
-# cp /resources/binp29/Data/malaria/backup_results/Ht.blastout.gz .
-# gzip -d Ht.blastout.gz
-
-# decided to use the given script, since it was quite difficult to visualize properly the files without a text editor on the server
+# version from BLASTX output: BLASTX 2.11.0+
+```
+Once the BLASTX analysis is over, we need to remove the sequences which have as first BLASTX hit a sequence belonging to an avian organism. To do so, we use the BLASTX results, the original gffParse FASTA file and two databases for taxonomy and uniprot. 
+The databases contain all scientific names (taxonomy.dat) and the genes id (uniprot_sprot.dat), which are used to extract the scaffolds from the gffParse.fna file which had a top BLAST hit belonging to a bird. I used the provided datParser.py script, which runs as:
+```shell
 python datParser.py Haemoproteus.blastx ../4_GTFtoFASTA/gffParse.fna taxonomy.dat uniprot_sprot.dat > bird_scaffolds.txt
+```
+The scaffolds to be reomves are saved in bird_scaffolds.txt. 
 
-# ignores the lines (-v) which match the given pattern (-f) from bird_scaffolds.txt and saves in a new file
-grep -v -f bird_scaffolds.txt ../4_GTFtoFASTA/gffParse.fna > filtered_scaffolds.txt
+### Clean again genome from bird scaffolds
 
-cd ..
+Now that we have the scaffolds to be removed, we use a python script called removeBird.py which removes these scaffolds from the Haemoproteus_tartakovskyi.output, and saves the newly cleaned genome in a new output. 
 
-cd Scripts
-scp inf-36-2021@bioinf-biol302436.biol.lu.se:/home/inf-36-2021/Desktop/BINP29/malaria_project/removeBird.py .
+The python script run as (see repo for full code):
+```shell
 cd ..
 mkdir -p 6_FilteredGeneMark && cd 6_FilteredGeneMark
 python ../Scripts/removeBird.py -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output -s ../5_BLAST/bird_scaffolds.txt -o Haemoproteus_clean.genome
-
+```
+### Gene Prediction on the clean genome
+We run the GeneMark script again, as before:
+```shell
 nohup gmes_petap.pl --sequence Haemoproteus_clean.genome &
+mv genemark_es.gtf Haemoproteus_clean.gtf # renamed files
+```
 
 # length of genome
 cd 6_FilteredGeneMark/
-mv genemark_es.gtf Haemoproteus_clean.gtf
+
 # now we run the gffParse.pl again, so we extract the genes again
 cd ..
 mkdir -p 7_CleanGTFtoFASTA && cd 7_CleanGTFtoFASTA
