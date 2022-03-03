@@ -221,6 +221,8 @@ We create a new directory, we activate the conda environment for proteinortho an
 ```shell
 mkdir 11_ProteinOrtho && cd 11_ProteinOrtho
 conda activate malariaenv
+proteinortho6.pl -h
+# PoFF version 6.0.33
 # I have Hc instead of Ht because the names are Haemo..._clean
 nohup proteinortho6.pl ../10_allGeneMark/{Hc,Pb,Pc,Pf,Pk,Pv,Py,Tg}.faa &
 conda deactivate
