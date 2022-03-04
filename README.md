@@ -391,6 +391,8 @@ phylip consense
 ```
 An additional setting is to have species 8 (Tg) as outgroup. 
 
-The resulting tree is diplayed with figtree and below there is the result:
+The resulting tree is diplayed with figtree on the local computer and below there is the result:
 
 ![](malaria_consensus.png)
+
+This tree agrees with the one present in the presentation. The parasites to be indeed grouped by host species, with Py and Pb (rodents) in one clade, Pv and Pc (humans and macaques) in another and Hc (*Haemoproteus*) as an outer species.  
