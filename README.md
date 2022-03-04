@@ -388,3 +388,5 @@ conda install -c bioconda phylip
 phylip consensus
 ```
 The resulting tree is diplayed with figtree and below there is the result:
+
+![]malaria_consensus.png
