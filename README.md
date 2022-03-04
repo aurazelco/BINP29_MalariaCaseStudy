@@ -253,23 +253,57 @@ We are therefore interested in creating the trees from orthologs which are dupli
 #### Question 7
 
 ```shell
-for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; (grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u| wc -l ) ; done
+for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; cd_busco=$(grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u| wc -l ) ; echo $cd_busco;  tot=$(cat $file | grep -v '^#' $file | cut -f1 | sort -u| wc -l ); (echo  $cd_busco*100/$tot | bc -l ) ; done
 Hc
 325
+72.86995515695067264573
 Pb
 372
+83.40807174887892376681
 Pc
 429
+96.18834080717488789237
 Pf
 436
+97.75784753363228699551
 Pk
 323
+72.42152466367713004484
 Pv
 437
+97.98206278026905829596
 Py
 434
+97.30941704035874439461
 Tg
 384
+86.09865470852017937219
+
+for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; cd_busco=$(grep -v '^#' $file | cut -f1,2 | grep -E 'Complete' | cut -f1 | sort -u| wc -l ) ; echo $cd_busco;  tot=$(cat $file | grep -v '^#' $file | cut -f1 | sort -u| wc -l ); (echo  $cd_busco*100/$tot | bc -l ) ; done
+Hc
+323
+72.42152466367713004484
+Pb
+361
+80.94170403587443946188
+Pc
+429
+96.18834080717488789237
+Pf
+435
+97.53363228699551569506
+Pk
+322
+72.19730941704035874439
+Pv
+435
+97.53363228699551569506
+Py
+433
+97.08520179372197309417
+Tg
+4
+.89686098654708520179
 ```
 
 #### Question 9-10
