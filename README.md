@@ -6,7 +6,7 @@ All analysis is executed on the server.
 
 We start from genomes of malaria parasites, and the endpoint is to build phylogenetic trees using parasites with different hosts, with a particular focus on *Haemoproteus tartakovskyi*. 
 
-The novel python scripts (removeScaffold.py, removeBird.py, GCcontent.py and buscoParser.py) are present in the Github repo. 
+The novel python scripts (removeScaffold.py, removeBird.py, GCcontent.py and buscoParser.py) are present in the Github repo. The final consensus tree is found under malaria_consensus.png. 
 
 ## Data Collection
 
@@ -35,7 +35,7 @@ After uploading it to the tmp fodler, we proceed to work on the *Haemoproteus ta
 
 *Haemoproteus tartakovskyi* is a parasite of birds; therefore, even if the parasite genome was enriched in the experimental settings, we still need to remove the sequences and scaffolds from the hosts before running the phylogenetic analysis. 
 
-From this genome, we need to remove the sequences which have a GC content higher than a certain threshold, and the sequences shorter than 3000 nucleotides. To do so, we run the remoevScaffold.py script. 
+From this genome, we need to remove the sequences which have a GCcontent higher than a certain threshold, and the sequences shorter than 3000 nucleotides. To do so, we run the remoevScaffold.py script. 
 
 But first, we make two new directories, one which contains all python scripts and the other to store the results of removeScaffold.py
 ```shell
@@ -226,9 +226,9 @@ proteinortho6.pl -h
 # I have Hc instead of Ht because the names are Haemo..._clean
 nohup proteinortho6.pl ../10_allGeneMark/{Hc,Pb,Pc,Pf,Pk,Pv,Py,Tg}.faa &
 conda deactivate
-# how many orthologs we have?
-grep -v '^#'  11_ProteinOrtho/myproject.proteinortho.tsv | wc -l
-# 5126
+# how many orthologs we have in all species?
+cat 11_ProteinOrtho/myproject.proteinortho.tsv | grep '^8' | wc -l
+# 167
 ```
 
 #### BUSCO
@@ -313,7 +313,7 @@ Tg
 4
 .89686098654708520179
 ```
-Except for *Toxoplasma gondii*, the genomes seem to be of good quality. 
+Except for *Toxoplasma gondii*, the genomes seem to be of good quality, since most of the hits are complete single copy genes. 
 
 #### Question 9-10
 
