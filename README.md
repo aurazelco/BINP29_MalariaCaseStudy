@@ -376,5 +376,6 @@ for file in 14_BUSCOParser_output/*.output; do id=$(echo $file | cut -d '/' -f2 
 
 And then we run raxml on clustalo outputs:
 ```shell
-
+mkdir 16_raxml && cd 16_raxml
+for file in ../15_clustalo/*.faa; do id=$(echo $file | cut -d '/' -f3 | cut -d '.' -f1 | cut -d '_' -f1 ); output=$id'.tre'; raxmlHPC -s $file -n $output -o Tg -m PROTGAMMABLOSUM62 -p 12345 -T 30 ; done
 ```
