@@ -357,3 +357,24 @@ python Scripts/buscoParser.py -busco_id 13_UniqProtID/BUSCO_uniq_ID.txt -species
 ```
 
 This script produces 185 files, containing the species name and the ortholog sequence in a FASTA-like format. 
+
+### Alignments and trees
+
+First we create a conda environment:
+```shell
+conda create -n malariaalign
+conda activate malariaalign
+conda install -c bioconda clustalo raxml
+# Clustal Omega - 1.2.4
+# RAxML version 8.2.12
+```
+Then we run clustalo on all output files from the parser:
+```shell
+mkdir 15_clustalo
+for file in 14_BUSCOParser_output/*.output; do id=$(echo $file | cut -d '/' -f2 | cut -d '.' -f1); output='15_clustalo/'$id'_aligned.faa'; clustalo -i $file -o $output -v ; done
+```
+
+And then we run raxml on clustalo outputs:
+```shell
+
+```
