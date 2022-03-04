@@ -1,6 +1,6 @@
 # BINP29_MalariaProject
-Repo containing the scripts used to analyze malaria parasites' genome in the BINP29 course (Lund University)
-https://github.com/aurazelco/BINP29_MalariaProject.git
+Repo containing the scripts used to analyze malaria parasites' genome in the BINP29 course (Lund University):
+https://github.com/aurazelco/BINP29_MalariaCaseStudy/edit/main/README.md
 
 All analysis is executed on the server.
 
