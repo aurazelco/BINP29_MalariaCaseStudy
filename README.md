@@ -26,6 +26,7 @@ gmes_petap.pl
 We run it in a newly created folder:
 ```shell
 mkdir 1_GeneMark && cd 1_GeneMark
+# --sequence indicates the input file
 nohup gmes_petap.pl --sequence ../Plasmodium_yoelii.genome &
 ```
 After uploading it to the tmp fodler, we proceed to work on the *Haemoproteus tartakovskyi* data. 
@@ -44,6 +45,7 @@ mkdir -p 2_RemoveScaffolds && cd 2_RemoveScaffolds
 ```
 The removeScaffold.py script is run as (see repo for full code):
 ```shell
+# -i is the input genome; -o the output name to be used
 python ../Scripts/removeScaffold.py -i ../Haemoproteus_tartakovskyi.genome -o Haemoproteus_tartakovskyi.output
 ```
 ### Make a gene prediction
@@ -55,6 +57,7 @@ nohup gmes_petap.pl --sequence ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.ou
 Once this is run, we would like to run the gffParse.pl script. However, there is a discrepancy on the scaffold names; therefore, we use sed to remove the extra fields. 
 ```shell
 mv genemark_es.gtf Haemoproteus.gff
+# removes extra fields so GeneMark can run smoothly
 cat Haemoproteus.gff | sed "s/ GC=.*\tGeneMark.hmm/\tGeneMark.hmm/" > Ht2.gff
 cd ..
 ```
@@ -68,6 +71,8 @@ gffParse.pl -v
 ```
 The gffParse.pl script is run as:
 ```shell
+# retrieves the fasta sequences and returns them as output both as nucleotides and aminoacids sequences
+# -i is the input file; -g is the gff/gtf file to use; -c and -p is so that aminoacids sequences are also saved in an output file
 gffParse.pl -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output  -g ../3_GenePredictionHaemoproteus/Ht2.gff -c -p
 ```
 ### BLAST
@@ -77,6 +82,7 @@ Once we obtain the gff files, we would like to BLAST so that we can remove the s
 ```shell
 cd ..
 mkdir -p 5_BLAST && cd 5_BLAST
+# -query input file; -db databse to use; -out output name -num_threads how many cores to use; -evalue E-value threshold
 blastx -query ../4_GTFtoFASTA/gffParse.fna -db SwissProt -out Haemoproteus.blastx -num_threads 20 -evalue 1e-10
 # version from BLASTX output: BLASTX 2.11.0+
 ```
@@ -95,6 +101,7 @@ The python script run as (see repo for full code):
 ```shell
 cd ..
 mkdir -p 6_FilteredGeneMark && cd 6_FilteredGeneMark
+# -i input file; -s scaffolds to be removed ; -o output filename
 python ../Scripts/removeBird.py -i ../2_RemoveScaffolds/Haemoproteus_tartakovskyi.output -s ../5_BLAST/bird_scaffolds.txt -o Haemoproteus_clean.genome
 ```
 ### Gene Prediction and gffParse on the clean genome
@@ -113,9 +120,13 @@ gffParse.pl -i ../6_FilteredGeneMark/Haemoproteus_clean.genome -g ../6_FilteredG
 #### Question 3 - genome length
 ```shell
 cd ..
+# counts characters in lines which are not headers
 cat 6_FilteredGeneMark/Haemoproteus_clean.genome | grep -v "^>" | tr -d "\n" | wc -c
+# console output:
 # 22068498
+# for each file in the folder, runs the same command as the previous line
 for file in *.genome; do echo $file; grep -v "^>" $file | tr -d "\n" | wc -c; done
+# console output:
 #Haemoproteus_tartakovskyi.genome -> this is before filtering (not included in final table)
 # 22609283
 #Plasmodium_berghei.genome
@@ -143,7 +154,9 @@ mv Tg.gff toxoplasma_gondii.gtf
 cp ../6_FilteredGeneMark/Haemoproteus_clean.gtf .
 
 # number of genes
+# for each gtf file, sorts and uniqs the gene ids contained in the 9th field
 for file in *.gtf; do echo $file; cut -f9 $file | cut -d ";" -f1 | sort -u | wc -l ; done
+# console output:
 # Haemoproteus_clean.gtf
 # 4429
 # knowlesi.gtf
@@ -168,8 +181,9 @@ To calculate the GC content, I wrote a python script, GCcontent.py, which runs a
 ```shell
 mkdir -p 9_Genomes
 # moved all genomes to a new folder for better tree organization
-
+# -path folder containing the genome files
 python Scripts/GCcontent.py -path 9_Genomes/
+# console output:
 #9_Genomes/Plasmodium_berghei.genome
 #23.72%
 #9_Genomes/Plasmodium_yoelii.genome
@@ -199,7 +213,7 @@ For each genome, we need to run gffParse.pl:
 mkdir 10_allGeneMark
 # renames file
 mv 8_allGTFs/knowlesi.gtf 8_allGTFs/plasmodium_knowlesi.gtf
-
+# for each gtf file, retrieves the name and shortens it (eg Tg) and runs gffParse.pl
 for file in 8_allGTFs/*; do echo $file; genome=$(echo $file | cut -d '/' -f2 | cut -d '.' -f1); genus=$(echo $file | cut -d '/' -f2 | cut -c 1); species=$(echo $file | cut -d '_' -f3 | cut -c 1); output=(${genus^}$species); gffParse.pl -i 9_Genomes/${genome^}'.genome' -g $file -c -p -b 10_allGeneMark/$output ; done
 ```
 
@@ -224,9 +238,11 @@ conda activate malariaenv
 proteinortho6.pl -h
 # PoFF version 6.0.33
 # I have Hc instead of Ht because the names are Haemo..._clean
+# runs proteinortho6.pl on these specific files
 nohup proteinortho6.pl ../10_allGeneMark/{Hc,Pb,Pc,Pf,Pk,Pv,Py,Tg}.faa &
 conda deactivate
 # how many orthologs we have in all species?
+# counts how many lines starts with 8, indicating orthologues found in all species
 cat 11_ProteinOrtho/myproject.proteinortho.tsv | grep '^8' | wc -l
 # 167
 ```
@@ -237,16 +253,20 @@ We change the environment to the one where we installed BUSCO, and then run BUSC
 conda activate malariaBusco
 mkdir -p 12_BUSCO
 
+# runs BUSCO for all .faa files in the folder, after retrieving the name so the output can have the same name
+# BUSCO: -i input file; -o output; -m prot (indictaes that it is proteins); -l lineage (here apicomplexa)
 for file in 10_allGeneMark/*.faa; do echo $file; output=$(echo $file | cut -d '/' -f2 | cut -d '.' -f1); echo $output; busco -i $file -o 12_BUSCO/$output -m prot -l apicomplexa; done
 ```
 
 The orthologs in BUSCO are classified as:
 ```shell
+# displays the different labels BUSCO assigns to the hits (sorts and uniq the values in the second field)
 cat 12_BUSCO/Tg/run_apicomplexa_odb10/full_table.tsv | grep -v '^#' | cut -f2 | sort -u
-Complete
-Duplicated
-Fragmented
-Missing
+# console output:
+#Complete
+#Duplicated
+#Fragmented
+#Missing
 ```
 We are therefore interested in creating the trees from orthologs which are duplicated or complete. 
 
@@ -257,61 +277,65 @@ BUSCO labels the orhtologues found as Complete, Duplicated, Missing or Fragmente
 We can first look at both labels:
 
 ```shell
+# prints for each file the name, the total number of duplicates and complete and the % over the total number of hits
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; cd_busco=$(grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u| wc -l ) ; echo $cd_busco;  tot=$(cat $file | grep -v '^#' $file | cut -f1 | sort -u| wc -l ); (echo  $cd_busco*100/$tot | bc -l ) ; done
-Hc
-325
-72.86995515695067264573
-Pb
-372
-83.40807174887892376681
-Pc
-429
-96.18834080717488789237
-Pf
-436
-97.75784753363228699551
-Pk
-323
-72.42152466367713004484
-Pv
-437
-97.98206278026905829596
-Py
-434
-97.30941704035874439461
-Tg
-384
-86.09865470852017937219
+# console output:
+#Hc
+#325
+#72.86995515695067264573
+#Pb
+#372
+#83.40807174887892376681
+#Pc
+#429
+#96.18834080717488789237
+#Pf
+#436
+#97.75784753363228699551
+#Pk
+#323
+#72.42152466367713004484
+#Pv
+#437
+#97.98206278026905829596
+#Py
+#434
+#97.30941704035874439461
+#Tg
+#384
+#86.09865470852017937219
 ```
 
 Then we look at the Complete hits alone:
 
 ```shell
+# prints for each file the name, the total number of complete and the % over the total number of hits
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; cd_busco=$(grep -v '^#' $file | cut -f1,2 | grep -E 'Complete' | cut -f1 | sort -u| wc -l ) ; echo $cd_busco;  tot=$(cat $file | grep -v '^#' $file | cut -f1 | sort -u| wc -l ); (echo  $cd_busco*100/$tot | bc -l ) ; done
-Hc
-323
-72.42152466367713004484
-Pb
-361
-80.94170403587443946188
-Pc
-429
-96.18834080717488789237
-Pf
-435
-97.53363228699551569506
-Pk
-322
-72.19730941704035874439
-Pv
-435
-97.53363228699551569506
-Py
-433
-97.08520179372197309417
-Tg
-4
-.89686098654708520179
+# console output:
+#Hc
+#323
+#72.42152466367713004484
+#Pb
+#361
+#80.94170403587443946188
+#Pc
+#429
+#96.18834080717488789237
+#Pf
+#435
+#97.53363228699551569506
+#Pk
+#322
+#72.19730941704035874439
+#Pv
+#435
+#97.53363228699551569506
+#Py
+#433
+#97.08520179372197309417
+#Tg
+#4
+#.89686098654708520179
 ```
 Except for *Toxoplasma gondii*, the genomes seem to be of good quality, since most of the hits are complete single copy genes. 
 
@@ -320,17 +344,17 @@ Except for *Toxoplasma gondii*, the genomes seem to be of good quality, since mo
 ```shell
 mkdir -p 13_UniqProtID
 
-# creates files to contain the IDs from BUSCO
+# creates files to contain the IDs from each BUSCO summary tsv files
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; (grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u > 13_UniqProtID/$species.txt) ; done
 
 # makes two concatenated files, one with all species, and one without Tg
 cat 13_UniqProtID/*.txt >> 13_UniqProtID/all.txt
 cat 13_UniqProtID/{Hc,Pb,Pc,Pf,Pk,Pv,Py}.txt >> 13_UniqProtID/noTg.txt
 
-# prints how many BUSCO ids are found in all species
+# prints how many BUSCO ids are found in all species -> sorts uniqs the lines containing 8 -> orthologues shared by all species
 cat 13_UniqProtID/all.txt | sort | uniq -c | grep '8 ' | wc -l
 # 185
-# prints how many BUSCO ids are found in all species except Tg
+# prints how many BUSCO ids are found in all species except Tg -> sorts uniqs the lines containing 7 -> orthologues shared by all species (no Tg)
 cat 13_UniqProtID/noTg.txt | sort | uniq -c | grep '7 ' | wc -l
 # 207
 ```
@@ -353,6 +377,7 @@ cat 13_UniqProtID/all.txt | sort | uniq -c | grep '8 ' | cut -d ' ' -f8 > 13_Uni
 The python script runs as follows (see repo for full code):
 
 ```shell
+# -busco BUSCO ID list; -species species list; -faa_path directory of .faa files; -output_path where to save the output files
 python Scripts/buscoParser.py -busco_id 13_UniqProtID/BUSCO_uniq_ID.txt -species 13_UniqProtID/species_names.txt -busco_path 12_BUSCO/ -faa_path 10_allGeneMark/ -output_path 14_BUSCOParse_output/
 ```
 
@@ -371,12 +396,14 @@ conda install -c bioconda clustalo raxml
 Then we run clustalo on all output files from the parser:
 ```shell
 mkdir 15_clustalo
+# for each file, retrieves the name and then runs clustalo: -i input; -o output; -v verbose
 for file in 14_BUSCOParser_output/*.output; do id=$(echo $file | cut -d '/' -f2 | cut -d '.' -f1); output='15_clustalo/'$id'_aligned.faa'; clustalo -i $file -o $output -v ; done
 ```
 
 And then we run raxml on clustalo outputs:
 ```shell
 mkdir 16_raxml && cd 16_raxml
+# for each file cfreated by clustalo, runs raxml: -s input sequence; -n output; -o outgroup species; -m BLOSUM mattrix to be used for alignment scores; -p seed; -T cores to be used
 for file in ../15_clustalo/*.faa; do id=$(echo $file | cut -d '/' -f3 | cut -d '.' -f1 | cut -d '_' -f1 ); output=$id'.tre'; raxmlHPC -s $file -n $output -o Tg -m PROTGAMMABLOSUM62 -p 12345 -T 30 ; done
 ```
 
