@@ -252,6 +252,10 @@ We are therefore interested in creating the trees from orthologs which are dupli
 
 #### Question 7
 
+BUSCO labels the orhtologues found as Complete, Duplicated, Missing or Fragmented. To assess the quality, we can check how many Duplicated and/or Complete hits we have. 
+
+We can first look at both labels:
+
 ```shell
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; cd_busco=$(grep -v '^#' $file | cut -f1,2 | grep -E 'Duplicated|Complete' | cut -f1 | sort -u| wc -l ) ; echo $cd_busco;  tot=$(cat $file | grep -v '^#' $file | cut -f1 | sort -u| wc -l ); (echo  $cd_busco*100/$tot | bc -l ) ; done
 Hc
@@ -278,7 +282,11 @@ Py
 Tg
 384
 86.09865470852017937219
+```
 
+Then we look at the Complete hits alone:
+
+```shell
 for folder in 12_BUSCO/*; do file=$folder$'/run_apicomplexa_odb10/full_table.tsv'; species=$(echo $file | cut -d '/' -f2) ; echo $species; cd_busco=$(grep -v '^#' $file | cut -f1,2 | grep -E 'Complete' | cut -f1 | sort -u| wc -l ) ; echo $cd_busco;  tot=$(cat $file | grep -v '^#' $file | cut -f1 | sort -u| wc -l ); (echo  $cd_busco*100/$tot | bc -l ) ; done
 Hc
 323
@@ -305,6 +313,7 @@ Tg
 4
 .89686098654708520179
 ```
+Except for *Toxoplasma gondii*, the genomes seem to be of good quality. 
 
 #### Question 9-10
 
